@@ -11,7 +11,8 @@ namespace db {
  */
     class IndexPredicate {
         // TODO pa2.2: add private members
-
+        Op op;
+        const Field *fvalue;
         /**
          * Constructor.
          *

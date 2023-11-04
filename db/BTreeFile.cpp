@@ -16,13 +16,24 @@ BTreeLeafPage *BTreeFile::findLeafPage(TransactionId tid, PagesMap &dirtypages, 
         BTreeInternalPage * page = static_cast<BTreeInternalPage *>(BTreeFile::getPage(tid, dirtypages, pid, Permissions::READ_ONLY));
         BTreeEntry * entry = nullptr;
         auto iter = page->begin();
+
+        // if no key is provided, find the leftmost child
+        if (f == nullptr) {
+            entry = &(*iter);
+            return findLeafPage(tid, dirtypages, entry->getLeftChild(), Permissions::READ_ONLY, f);
+        }
+
+        // if key is provided
         while (iter != page->end()) {
             // entry now points to the same BTree Entry object that iter points to.
             entry = &(*iter);
-            if (f == nullptr || f->compare(Op::LESS_THAN_OR_EQ, entry->getKey())) {
+            // if f <= entry key, look left
+            if (f->compare(Op::LESS_THAN_OR_EQ, entry->getKey())) {
                 return findLeafPage(tid, dirtypages, entry->getLeftChild(), Permissions::READ_ONLY, f);
             }
+            ++iter;
         }
+        // if we did not return anything from the loop, it means the key is the largest so we go to the right child of our last entry read.
         return findLeafPage(tid, dirtypages, entry->getRightChild(), Permissions::READ_ONLY, f);
     } 
 }
