@@ -10,7 +10,21 @@ using namespace db;
 BTreeLeafPage *BTreeFile::findLeafPage(TransactionId tid, PagesMap &dirtypages, BTreePageId *pid, Permissions perm,
                                        const Field *f) {
     // TODO pa2.2: implement
-    return nullptr;
+    if (pid->getType() == BTreePageType::LEAF) {
+        return static_cast<BTreeLeafPage *>(BTreeFile::getPage(tid, dirtypages, pid, perm));
+    } else {
+        BTreeInternalPage * page = static_cast<BTreeInternalPage *>(BTreeFile::getPage(tid, dirtypages, pid, Permissions::READ_ONLY));
+        BTreeEntry * entry = nullptr;
+        auto iter = page->begin();
+        while (iter != page->end()) {
+            // entry now points to the same BTree Entry object that iter points to.
+            entry = &(*iter);
+            if (f == nullptr || f->compare(Op::LESS_THAN_OR_EQ, entry->getKey())) {
+                return findLeafPage(tid, dirtypages, entry->getLeftChild(), Permissions::READ_ONLY, f);
+            }
+        }
+        return findLeafPage(tid, dirtypages, entry->getRightChild(), Permissions::READ_ONLY, f);
+    } 
 }
 
 BTreeLeafPage *BTreeFile::splitLeafPage(TransactionId tid, PagesMap &dirtypages, BTreeLeafPage *page, const Field *field) {

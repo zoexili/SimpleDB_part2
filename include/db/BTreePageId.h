@@ -26,7 +26,6 @@ namespace db {
          * @param type which kind of page it is
          */
         BTreePageId(int tableId, int pgNo, BTreePageType type) : tableId(tableId), pgNo(pgNo), type(type) {}
-
         /** @return the table associated with this PageId */
         int getTableId() const override { return tableId; }
 
