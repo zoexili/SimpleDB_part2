@@ -5,10 +5,13 @@ using namespace db;
 
 void BufferPool::evictPage() {
     // TODO pa2.1: implement
+
 }
 
+// Flush all dirty pages to disk.
 void BufferPool::flushAllPages() {
     // TODO pa2.1: implement
+
 }
 
 void BufferPool::discardPage(const PageId *pid) {
