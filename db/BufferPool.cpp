@@ -7,7 +7,6 @@ using namespace db;
 void BufferPool::evictPage()
 {
     // TODO pa2.1: implement
-    if (pages.size() < numPages) return;
     for (const auto item : pages) {
         if (item.second->isDirty() != std::nullopt) {
             flushPage(item.first);

@@ -297,14 +297,6 @@ void BTreeFile::setEmptyPage(TransactionId tid, PagesMap &dirtypages, int emptyP
     headerPage->markSlotUsed(emptySlot, false);
 }
 
-BTreeFile::BTreeFile(const char *fname, int key, const TupleDesc &td) : keyField(key), td(td) {
-    fd = open(fname, O_RDWR | O_CREAT, 0644);
-    if (fd == -1) {
-        throw std::runtime_error("open");
-    }
-    tableid = std::hash<std::string>{}(fname);
-}
-
 int BTreeFile::getId() const { return tableid; }
 
 const TupleDesc &BTreeFile::getTupleDesc() const { return td; }
