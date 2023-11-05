@@ -40,13 +40,71 @@ BTreeLeafPage *BTreeFile::findLeafPage(TransactionId tid, PagesMap &dirtypages, 
 
 BTreeLeafPage *BTreeFile::splitLeafPage(TransactionId tid, PagesMap &dirtypages, BTreeLeafPage *page, const Field *field) {
     // TODO pa2.3: implement
-    return nullptr;
+    BTreeLeafPage * rightPage = static_cast<BTreeLeafPage *>(getEmptyPage(tid, dirtypages, BTreePageType::LEAF));
+    auto iter = page->rbegin();
+    int count = 0;
+    Tuple *currTuple = nullptr;
+    while (iter != page->rend()) {
+        currTuple = &(*iter);
+        page->deleteTuple(currTuple);
+        rightPage->insertTuple(currTuple);
+        count++;
+        if (count == page->getNumTuples() / 2) {
+            break;
+        }
+        ++iter;
+    }
+
+    if (page->getRightSiblingId() != nullptr) {
+        BTreePageId * oldRightId = page->getRightSiblingId();
+        BTreeLeafPage * oldRightPage = static_cast<BTreeLeafPage *>(BTreeFile::getPage(tid, dirtypages, oldRightId, Permissions::READ_WRITE));
+        oldRightPage->setLeftSiblingId(const_cast<BTreePageId*>(&rightPage->getId()));
+    }
+
+    rightPage->setLeftSiblingId(const_cast<BTreePageId*>(&page->getId()));
+    rightPage->setRightSiblingId(page->getRightSiblingId());
+    page->setRightSiblingId(const_cast<BTreePageId*>(&rightPage->getId()));
+
+    Field * midKey = const_cast<Field *>(&(currTuple->getField(keyField)));
+    BTreeEntry *entry = new BTreeEntry(midKey, const_cast<BTreePageId*>(&page->getId()), const_cast<BTreePageId*>(&rightPage->getId()));
+    BTreeInternalPage * parentPage = getParentWithEmptySlots(tid, dirtypages, page->getParentId(), midKey);
+    parentPage->insertEntry(*entry);
+    updateParentPointer(tid, dirtypages, &parentPage->getId(), const_cast<BTreePageId*>(&page->getId()));
+    updateParentPointer(tid, dirtypages, &parentPage->getId(), const_cast<BTreePageId*>(&rightPage->getId()));
+
+    if (field->compare(Op::LESS_THAN_OR_EQ, midKey)) return page;
+    return rightPage;
 }
 
 BTreeInternalPage *BTreeFile::splitInternalPage(TransactionId tid, PagesMap &dirtypages, BTreeInternalPage *page,
                                                 Field *field) {
     // TODO pa2.3: implement
-    return nullptr;
+    BTreeInternalPage * rightPage = static_cast<BTreeInternalPage *>(getEmptyPage(tid, dirtypages, BTreePageType::INTERNAL));
+    auto iter = page->rbegin();
+    int count = 0;
+    BTreeEntry *currEntry = nullptr;
+    while (iter != page->rend()) {
+        currEntry = &(*iter);
+        page->deleteKeyAndRightChild(currEntry);
+        rightPage->insertEntry(*currEntry);
+        count++;
+        if (count == page->getNumEntries() / 2) {
+            break;
+        }
+        ++iter;
+    }
+
+    BTreeEntry *e = &(*iter);
+    Field * midKey = e->getKey();
+    page->deleteKeyAndRightChild(e);
+    BTreeEntry *entry = new BTreeEntry(midKey, const_cast<BTreePageId*>(&page->getId()), const_cast<BTreePageId*>(&rightPage->getId()));
+    BTreeInternalPage * parentPage = getParentWithEmptySlots(tid, dirtypages, page->getParentId(), midKey);
+    parentPage->insertEntry(*entry);
+    updateParentPointer(tid, dirtypages, &parentPage->getId(), const_cast<BTreePageId*>(&parentPage->getId()));
+    updateParentPointer(tid, dirtypages, &parentPage->getId(), const_cast<BTreePageId*>(&rightPage->getId()));
+
+    if (field->compare(Op::LESS_THAN_OR_EQ, midKey)) return page;
+    return rightPage;
 }
 
 void BTreeFile::stealFromLeafPage(BTreeLeafPage *page, BTreeLeafPage *sibling, BTreeInternalPage *parent,

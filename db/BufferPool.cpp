@@ -69,10 +69,17 @@ void BufferPool::flushPages(const TransactionId &tid)
 void BufferPool::insertTuple(const TransactionId &tid, int tableId, Tuple *t)
 {
     // TODO pa2.3: implement
-    
+    std::vector<Page *> changedPages = Database::getCatalog().getDatabaseFile(tableId)->insertTuple(tid, *t);
+    for (const auto item: changedPages) {
+        item->markDirty(tid);
+    }
 }
 
 void BufferPool::deleteTuple(const TransactionId &tid, Tuple *t)
 {
     // TODO pa2.3: implement
+    std::vector<Page *> changedPages = Database::getCatalog().getDatabaseFile(t->getRecordId()->getPageId()->getTableId())->deleteTuple(tid, *t);
+    for (const auto item: changedPages) {
+        item->markDirty(tid);
+    }
 }
